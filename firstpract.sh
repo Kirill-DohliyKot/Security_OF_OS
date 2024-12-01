@@ -1,7 +1,7 @@
 #!/bin/bash
 
 print_help() {
-    echo "Using: \$0 [options]"
+    echo "Using: \\$0 [options]"
     echo ""
     echo "Options"
     echo "  -u, --users            Выводит перечень пользователей и их домашних директорий."
@@ -12,9 +12,12 @@ print_help() {
 }
 
 # Инициализация переменных для путей
-log_PATH=""
-error_PATH=""
-#action=""
+log_PATH="/home/alt/logi"
+error_PATH="/home/alt/err"
+errors(){
+    echo "ERROR"
+}
+action=""
 
 # Функция для вывода пользователей и их домашних директорий
 list_users() {
@@ -23,20 +26,18 @@ list_users() {
 
 # Функция для вывода запущенных процессов
 list_processes() {
-    if [ -n "$log_PATH" ]; then
-        ps -Ao pid,comm --sort=pid > "$log_PATH" 2>/dev/null
-    else
-        ps -Ao pid,comm --sort=pid
-    fi
+    ps -Ao pid,comm --sort=pid
 }
 
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
         -u|--users)
             action="users"
+            list_users
             ;;
         -p|--processes)
             action="processes"
+            list_processes
             ;;
         -h|--help)
             print_help
@@ -48,13 +49,13 @@ while [[ "$#" -gt 0 ]]; do
             ;;
         -e|--errors)
             error_PATH="$2"
-            echo "Ошибка" > "$error_PATH"
-            print_help
+            echo "ERROR" > "$error_PATH"
+            #print_help
             exit 1
             ;;
         *)
             echo "Неизвестный аргумент: $1"
-            print_help
+            #print_help
             exit 1
             ;;
     esac
@@ -62,43 +63,40 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 # Проверка и установка перенаправления потоков, если указаны пути
-if [ -n "$log_PATH" ]; then
-    if [ -w "$log_PATH" ] || [ ! -e "$log_PATH" ]; then
-        exec > "$log_PATH"
-    else
-        echo "Error: Cannot write to log path $log_PATH" >&2
-        if [ -n "$error_PATH" ]; then
-            echo "Ошибка: Невозможно записать в файл лога $log_PATH" > "$error_PATH"
-        fi
-       # print_help
-        exit 1
-    fi
-fi
-
 if [ -n "$error_PATH" ]; then
     if [ -w "$error_PATH" ] || [ ! -e "$error_PATH" ]; then
-        exec 2> "$error_PATH"
+        {
+            
+			echo "No valid action specified."
+			#echo "ERRORS"
+        }> "$error_PATH"
     else
         echo "Error: Cannot write to error path $error_PATH" >&2
-        if [ -n "$error_PATH" ]; then
-            echo "Ошибка: Невозможно записать в файл ошибок $error_PATH" > "$error_PATH"
-        fi
-        print_help
         exit 1
     fi
 fi
 
 # Выполнение действия в зависимости от аргумента
-case $action in
-    users) list_users ;;
-    processes) list_processes ;;
-    help) print_help ;;
-    *)
-        echo "No valid action specified." >&2
-        if [ -n "$error_PATH" ]; then
-            echo "Ошибка: Не указано действие." > "$error_PATH"
-        fi
-        print_help
+if [ -n "$log_PATH" ]; then
+    if [ -w "$log_PATH" ] || [ ! -e "$log_PATH" ]; then
+        {
+           #     awk -F: '{ print $1 " " $6 }' /etc/passwd | sort
+           #     ps -Ao pid,comm --sort=pid
+                list_users
+                list_processes
+
+        } > "$log_PATH"
+    else
+        echo "Error: Cannot write to log path $log_PATH" >&2
         exit 1
-        ;;
-esac
+    fi
+else
+    case $action in
+        users) list_users ;;
+        processes) list_processes ;;
+        *)
+            echo "No valid action specified." >&2
+            exit 1
+            ;;
+    esac
+fi
