@@ -29,37 +29,63 @@ list_processes() {
     ps -Ao pid,comm --sort=pid
 }
 
-while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        -u|--users)
+
+while getopts ":uphl:e:-:" opt; do
+    case $opt in
+        u)
             action="users"
-            list_users
+			list_users
             ;;
-        -p|--processes)
+        p)
             action="processes"
-            list_processes
+			list_processes
             ;;
-        -h|--help)
-            print_help
+        h)
+            show_help
             exit 0
             ;;
-        -l|--log)
-            log_PATH="$2"
-            shift
+        l)
+            log_path="$OPTARG"
             ;;
-        -e|--errors)
-            error_PATH="$2"
-            echo "ERROR" > "$error_PATH"
-            #print_help
+        e)
+            error_path="$OPTARG"
+            ;;
+        
+        -)
+            case "${OPTARG}" in
+            users)
+                action="users"
+				list_users
+                ;;
+            processes)
+                action="processes"
+				list_processes
+                ;;
+            help)
+                show_help
+                exit 0
+                ;;
+            log)
+                log_path="${!OPTIND}"; OPTIND=$(( OPTIND + 1 ))
+                ;;
+            errors)
+                error_path="${!OPTIND}"; OPTIND=$(( OPTIND + 1 ))
+                ;;
+             *)
+                echo "Invalid option: --${OPTARG}" >&2
+                exit 1
+                ;;
+            esac
+            ;;
+        \?)
+            #echo "Invalid opion: -$OPTARG" >&2
             exit 1
             ;;
-        *)
-            echo "Неизвестный аргумент: $1"
-            #print_help
+        :)
+            #echo "Option -$OPTARG requirs an argument." >&2
             exit 1
             ;;
     esac
-    shift
 done
 
 # Проверка и установка перенаправления потоков, если указаны пути
@@ -67,7 +93,7 @@ if [ -n "$error_PATH" ]; then
     if [ -w "$error_PATH" ] || [ ! -e "$error_PATH" ]; then
         {
             
-			echo "No valid action specified."
+			echo "Option requires an argument."
 			#echo "ERRORS"
         }> "$error_PATH"
     else
