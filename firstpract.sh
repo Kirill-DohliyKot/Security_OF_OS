@@ -42,7 +42,19 @@ list_users() {
 list_processes() {
     ps -Ao pid,comm --sort=pid
 }
+# Функция перенаправления стандартного вывода
+r_stdout() {
+    local log_PATH="$1"
+    ch_and_create_file "$log_PATH"
+    exec > "$log_PATH"
+}
 
+# Функция перенаправления стандартного потока ошибок
+r_stderr() {
+    local error_PATH="$1"
+    ch_and_create_file "$error_PATH"
+    exec 2>"$error_PATH"
+}
 while getopts ":uphl:e:-:" opt; do
     case $opt in
         u)
