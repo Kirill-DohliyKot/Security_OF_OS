@@ -15,7 +15,24 @@ print_help() {
 log_PATH=""
 error_PATH=""
 action=""
+# Функция проверки доступности пути и создание файла
+ch_and_create_file() {
+    local path="$1"
+    if [[ ! -d "$(dirname "$path")" ]]; then
+        echo "Ошибка: Директория '$path' не существует." >&2
+        exit 1
+    fi
 
+    if [[ -f "$path" ]]; then
+        echo "Предупреждение: Файл '$path' существует. Будет перезаписан." >&2
+    fi
+    touch "$path" # создаем файл если он не существует.
+    # проверяем права на запись
+    if [[ ! -w "$path" ]]; then
+        echo "Ошибка: Нет прав на запись в '$path'" >&2
+        exit 1
+    fi
+}
 # Функция для вывода пользователей и их домашних директорий
 list_users() {
     awk -F: '$3>=1000 { print $1 " " $6 }' /etc/passwd | sort
