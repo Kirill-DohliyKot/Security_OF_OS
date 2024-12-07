@@ -70,9 +70,11 @@ while getopts ":uphl:e:-:" opt; do
             ;;
         l)
             log_PATH="$OPTARG"
+            r_stdout "$log_PATH"
             ;;
         e)
             error_PATH="$OPTARG"
+            r_stderr "$error_PATH"
             ;;
         -)
             case "${OPTARG}" in
@@ -89,9 +91,11 @@ while getopts ":uphl:e:-:" opt; do
                     ;;
                 log)
                     log_PATH="${!OPTIND}"; OPTIND=$(( OPTIND + 1 ))
+                    r_stdout "$log_PATH"
                     ;;
                 errors)
                     error_PATH="${!OPTIND}"; OPTIND=$(( OPTIND + 1 ))
+                    r_stderr "$error_PATH"
                     ;;
                 *)
                     echo "Invalid option: --${OPTARG}" >&2
@@ -122,45 +126,48 @@ else
     echo "Ошибка, действие не задано" > "$default_error_file"
 fi
 
-# Выполнение действия в зависимости от аргумента
-if [ -n "$log_PATH" ]; then
-    if [ -w "$log_PATH" ] || [ ! -e "$log_PATH" ]; then
-        {
-            case $action in
-                users) list_users ;;
-                processes) list_processes ;;
-                help) print_help ;;
-                *)
-                    #echo "No valid action specified." >&2
-                    exit 1
-                    ;;
-            esac
-        } > "$log_PATH"
+# Проверка и установка перенаправления потоков, если указаны пути
+if [ -n "$error_PATH" ]; then
+    if [[ "$error_PATH" == *.* ]]; then  # Проверка на расширение .*
+        touch "$error_PATH"  # Создаем файл, если он не существует
+        echo "Ошибка, действие не задано" > "$error_PATH"
     else
-        
-        echo "Error: Cannot write to log path $log_PATH" >&2
+        echo "Error: Invalid file extension for error path $error_PATH" >&2
         exit 1
     fi
 else
-        default_log_file="logi.log"
-        {
-            case $action in
-                users) list_users ;;
-                processes) list_processes ;;
-                help) print_help ;;
-                *)
-                    #echo "No valid action specified." >&2
-                    exit 1
-                    ;;
-            esac
-        } > "$default_log_file"
+    # Если error_PATH не указан, создаем файл по умолчанию
+    default_error_file="error_log.txt"
+    touch "$default_error_file"  # Создаем файл, если он не существует
+    echo "Ошибка, действие не задано" > "$default_error_file"
+fi
+
+# Выполнение действия в зависимости от аргумента
+execute_action() {
     case $action in
         users) list_users ;;
         processes) list_processes ;;
         help) print_help ;;
         *)
-            #echo "No valid action specified." >&2
+            echo "No valid action specified." >&2
             exit 1
             ;;
     esac
+}
+
+if [ -n "$log_PATH" ]; then
+    if [ -w "$log_PATH" ] || [ ! -e "$log_PATH" ]; then
+        execute_action > "$log_PATH"
+    else
+        echo "Error: Cannot write to log path $log_PATH" >&2
+        exit 1
+    fi
+else
+    # Если лог-файл не указан, выводим результат в терминал
+    execute_action
+    # Если лог-файл не указан, также записываем в файл по умолчанию
+    default_log_file="logi.log"
+    {
+        execute_action
+    } > "$default_log_file"
 fi
