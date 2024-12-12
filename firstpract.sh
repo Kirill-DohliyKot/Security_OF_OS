@@ -162,12 +162,4 @@ if [ -n "$log_PATH" ]; then
         echo "Error: Cannot write to log path $log_PATH" >&2
         exit 1
     fi
-else
-    # Если лог-файл не указан, выводим результат в терминал
-    execute_action
-    # Если лог-файл не указан, также записываем в файл по умолчанию
-    default_log_file="logi.log"
-    {
-        execute_action
-    } > "$default_log_file"
 fi
