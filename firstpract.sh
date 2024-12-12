@@ -98,50 +98,37 @@ while getopts ":uphl:e:-:" opt; do
                     r_stderr "$error_PATH"
                     ;;
                 *)
-                    echo "Invalid option: --${OPTARG}" >&2
+                    error_message="Нет такого флага: --${OPTARG}"
+                    if [ -n "$error_PATH" ]; then
+                        echo "$error_message" >> "$error_PATH"  # Запись ошибки в файл ошибок
+                    else
+                        echo "$error_message" >&2  # Вывод ошибки в терминал
+                    fi
                     exit 1
                     ;;
+
             esac
             ;;
         \?)
+            error_message="Нет такого флага: -$OPTARG"
+            if [ -n "$error_PATH" ]; then
+                echo "$error_message" >> "$error_PATH"  # Запись ошибки в файл ошибок
+            else
+                echo "$error_message" >&2  # Вывод ошибки в терминал
+            fi
             exit 1
             ;;
         :)
+              error_message="Отсутствует аргумент для флага: -$OPTARG"
+            if [ -n "$error_PATH" ]; then
+                echo "$error_message" >> "$error_PATH"  # Запись ошибки в файл ошибок
+            else
+                echo "$error_message" >&2  # Вывод ошибки в терминал
+            fi
             exit 1
             ;;
     esac
 done
-
-# Проверка и установка перенаправления потоков, если указаны пути
-if [ -n "$error_PATH" ]; then
-    if [[ "$error_PATH" == *.* ]]; then  # Проверка на расширение .*
-        echo "Ошибка, действие не задано" > "$error_PATH"
-    else
-        echo "Error: Invalid file extension for error path $error_PATH" >&2
-        exit 1
-    fi
-else
-    # Если error_PATH не указан, создаем файл по умолчанию
-    default_error_file="error_log.txt"
-    echo "Ошибка, действие не задано" > "$default_error_file"
-fi
-
-# Проверка и установка перенаправления потоков, если указаны пути
-if [ -n "$error_PATH" ]; then
-    if [[ "$error_PATH" == *.* ]]; then  # Проверка на расширение .*
-        touch "$error_PATH"  # Создаем файл, если он не существует
-        echo "Ошибка, действие не задано" > "$error_PATH"
-    else
-        echo "Error: Invalid file extension for error path $error_PATH" >&2
-        exit 1
-    fi
-else
-    # Если error_PATH не указан, создаем файл по умолчанию
-    default_error_file="error_log.txt"
-    touch "$default_error_file"  # Создаем файл, если он не существует
-    echo "Ошибка, действие не задано" > "$default_error_file"
-fi
-
 # Выполнение действия в зависимости от аргумента
 execute_action() {
     case $action in
@@ -154,6 +141,16 @@ execute_action() {
             ;;
     esac
 }
+# Проверка на отсутствие действия (если ни один флаг не был указан)
+if [[ -z "$action" ]]; then
+    error_message="Ошибка: Действие не задано."
+    if [ -n "$error_PATH" ]; then
+        echo "$error_message" >> "$error_PATH"  # Запись ошибки в файл ошибок
+    else
+        echo "$error_message" >&2  # Вывод ошибки в терминал
+    fi
+    exit 1
+fi
 
 if [ -n "$log_PATH" ]; then
     if [ -w "$log_PATH" ] || [ ! -e "$log_PATH" ]; then
@@ -162,4 +159,19 @@ if [ -n "$log_PATH" ]; then
         echo "Error: Cannot write to log path $log_PATH" >&2
         exit 1
     fi
+fi
+# Если не указаны флаги -l или -e, выводим результат в терминал
+if [ -z "$log_PATH" ] && [ -z "$error_PATH" ]; then
+    execute_action
+fi
+
+# Обработка случая, когда не указано действие (action пуст)
+if [ -z "$action" ]; then
+    error_message="Ошибка: Не указано действие."
+    if [ -n "$error_PATH" ]; then
+        echo "$error_message" >> "$error_PATH"  # Запись ошибки в файл ошибок
+    else
+        echo "$error_message" >&2  # Вывод ошибки в терминал
+    fi
+    exit 1
 fi
